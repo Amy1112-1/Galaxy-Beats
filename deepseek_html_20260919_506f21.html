@@ -1,0 +1,2443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>太空节奏挑战</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Baloo+2:wght@900&family=ZCOOL+KuaiLe&family=ZCOOL+QingKe+HuangYou&family=Ma+Shan+Zheng&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --neon-cyan: #4dd0ff;
+        --neon-pink: #f15bb5;
+        --neon-yellow: #ffd60a;
+        --neon-orange: #ff8500;
+        --perfect-green: #00f5a0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+        width: 100%; height: 100%;
+        overflow: hidden;
+        background: #050618;
+        font-family: 'Nunito', 'ZCOOL KuaiLe', 'Microsoft YaHei', sans-serif;
+        user-select: none;
+    }
+    #screen-wrapper {
+        position: fixed; top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        display: flex; justify-content: center; align-items: center;
+        background: #050618;
+        overflow: hidden;
+    }
+    #stage {
+        position: relative;
+        width: 1920px; height: 1080px;
+        transform-origin: center center;
+        background: radial-gradient(ellipse at 30% 20%, 
+            #2a3a9e 0%, #1a2472 35%, #0a0e3f 70%, #050618 100%);
+        overflow: hidden;
+        box-shadow: 0 0 100px rgba(77, 208, 255, 0.4), 0 0 200px rgba(155, 93, 229, 0.3);
+        flex-shrink: 0;
+    }
+    #stage::before {
+        content: '';
+        position: absolute; inset: 0;
+        background: 
+            radial-gradient(circle at 15% 25%, rgba(155, 93, 229, 0.18) 0%, transparent 30%),
+            radial-gradient(circle at 85% 70%, rgba(77, 208, 255, 0.15) 0%, transparent 35%),
+            radial-gradient(circle at 50% 90%, rgba(241, 91, 181, 0.1) 0%, transparent 30%);
+        pointer-events: none;
+        z-index: 0;
+    }
+    .scroll-layer {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        pointer-events: none;
+        will-change: transform;
+        transform: translate3d(0, 0, 0);
+        backface-visibility: hidden;
+        contain: layout style paint;
+    }
+    .layer-content {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 1080px;
+    }
+    #layer-stars { z-index: 1; }
+    #layer-planets { z-index: 2; }
+    #layer-meteors { z-index: 3; }
+
+    body.racing.racing-active #layer-stars { animation: bgScrollDown 3.5s linear infinite; }
+    body.racing.racing-active #layer-planets { animation: bgScrollDown 2.2s linear infinite; }
+    body.racing.racing-active #layer-meteors { animation: bgScrollDown 1.2s linear infinite; }
+
+    @keyframes bgScrollDown {
+        0%   { transform: translate3d(0, -1080px, 0); }
+        100% { transform: translate3d(0, 1080px, 0); }
+    }
+
+    .stars-bg { 
+        position: absolute; top: 0; left: 0;
+        width: 100%; height: 100%;
+        pointer-events: none; overflow: hidden;
+    }
+    .star {
+        position: absolute;
+        background: white; border-radius: 50%;
+        box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+    }
+    .star.twinkle { animation: twinkle 2s infinite alternate; }
+    .star.twinkle-bright {
+        animation: twinkleBright 1.5s infinite alternate;
+        box-shadow: 0 0 12px rgba(255, 255, 255, 0.9), 0 0 20px rgba(77, 208, 255, 0.6);
+    }
+    @keyframes twinkle {
+        0%   { opacity: 0.2; transform: scale(0.6); }
+        100% { opacity: 1;   transform: scale(1.2); }
+    }
+    @keyframes twinkleBright {
+        0%   { opacity: 0.3; transform: scale(0.7); }
+        100% { opacity: 1;   transform: scale(1.4); }
+    }
+
+    .scene-img {
+        position: absolute;
+        pointer-events: none; user-select: none;
+        -webkit-user-drag: none;
+        object-fit: contain;
+    }
+    .layer-content .earth-img { width: 900px; height: 900px; left: -100px; bottom: -180px; filter: drop-shadow(0 0 60px rgba(77, 208, 255, 0.5)); }
+    .layer-content .saturn-img { width: 460px; height: 460px; right: -120px; top: 100px; filter: drop-shadow(0 0 40px rgba(255, 214, 10, 0.5)); }
+    .layer-content .blackhole-img { width: 200px; height: 200px; top: 220px; left: 18%; filter: drop-shadow(0 0 40px rgba(155, 93, 229, 0.9)); }
+    .layer-content .satellite-img { width: 180px; height: 180px; top: 100px; left: 32%; filter: drop-shadow(0 0 25px rgba(77, 208, 255, 0.7)); }
+    .layer-content .alien-img { width: 220px; height: 260px; right: 60px; bottom: 380px; filter: drop-shadow(0 0 25px rgba(0, 245, 160, 0.6)); }
+
+    body.in-game .alien-img { display: none !important; }
+
+    .flying-meteor {
+        position: absolute;
+        pointer-events: none;
+        object-fit: contain;
+        filter: drop-shadow(0 0 15px rgba(255, 133, 0, 0.7));
+    }
+    .layer-content .meteor-1 { width: 140px; height: 140px; top: 100px; right: 15%; }
+    .layer-content .meteor-2 { width: 110px; height: 110px; top: 400px; left: 20%; }
+    .layer-content .meteor-3 { width: 95px; height: 95px; top: 700px; left: 45%; }
+    .layer-content .meteor-4 { width: 120px; height: 120px; top: 900px; right: 30%; }
+
+    .flying-rocket {
+        position: absolute;
+        pointer-events: none;
+        z-index: 6; object-fit: contain;
+        filter: drop-shadow(0 0 20px rgba(77, 208, 255, 0.8))
+                drop-shadow(0 0 40px rgba(255, 133, 0, 0.4));
+    }
+    .flying-rocket.rocket-1 { width: 220px; height: 220px; top: 110%; right: 65%; animation: rocketFly1 12s linear infinite; }
+    .flying-rocket.rocket-2 { width: 180px; height: 180px; top: 110%; left: 55%; animation: rocketFly2 15s linear infinite; animation-delay: 4s; }
+    .flying-rocket.rocket-3 { width: 160px; height: 160px; top: 110%; left: 85%; animation: rocketFly3 13s linear infinite; animation-delay: 8s; }
+
+    @keyframes rocketFly1 {
+        0% { top: 110%; right: 65%; opacity: 0; transform: rotate(-30deg); }
+        10% { opacity: 1; } 90% { opacity: 1; }
+        100% { top: -280px; right: 8%; opacity: 0; transform: rotate(-30deg); }
+    }
+    @keyframes rocketFly2 {
+        0% { top: 110%; left: 55%; opacity: 0; transform: rotate(30deg); }
+        10% { opacity: 1; } 90% { opacity: 1; }
+        100% { top: -240px; left: 15%; opacity: 0; transform: rotate(30deg); }
+    }
+    @keyframes rocketFly3 {
+        0% { top: 110%; left: 85%; opacity: 0; transform: rotate(-15deg); }
+        10% { opacity: 1; } 90% { opacity: 1; }
+        100% { top: -200px; left: 55%; opacity: 0; transform: rotate(-15deg); }
+    }
+
+    body.racing .flying-rocket { display: none; }
+
+    .screen {
+        position: absolute; inset: 0; z-index: 10;
+        opacity: 0; visibility: hidden;
+        transition: opacity 0.5s ease, visibility 0.5s ease;
+    }
+    .screen.active { opacity: 1; visibility: visible; z-index: 20; }
+
+    /* ==========================================================
+       剪纸镂空手写字体风格
+       ========================================================== */
+
+    /* ========== 主菜单标题 ========== */
+    .menu-title {
+        position: absolute; top: 100px; left: 50%; transform: translateX(-50%);
+        text-align: center;
+        pointer-events: none; z-index: 32;
+    }
+    .menu-title .main-title {
+        display: flex; align-items: center; justify-content: center;
+        gap: 24px; 
+        font-size: 150px;
+        font-weight: 900;
+        letter-spacing: 18px;
+        line-height: 1.15;
+        white-space: nowrap;
+        font-family: 'ZCOOL KuaiLe', 'ZCOOL QingKe HuangYou', 'Ma Shan Zheng', 'Microsoft YaHei', cursive;
+        color: transparent;
+        -webkit-text-stroke: 4px #ffffff;
+        paint-order: stroke fill;
+        text-shadow: none;
+    }
+    .menu-title .main-title .rocket-icon {
+        font-size: 110px;
+        -webkit-text-stroke: 0; 
+        -webkit-text-fill-color: initial;
+        filter: drop-shadow(0 0 25px rgba(255, 133, 0, 0.9)) drop-shadow(0 0 50px rgba(255, 214, 10, 0.6));
+        animation: rocketIconFloat 3s ease-in-out infinite;
+    }
+    @keyframes rocketIconFloat { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-12px) rotate(-5deg); } }
+
+    /* ========== 音符栏 ========== */
+    .level-bar {
+        position: absolute; top: 340px; left: 50%; transform: translateX(-50%);
+        padding: 22px 40px;
+        background: linear-gradient(180deg, #2a3a9e 0%, #1a2472 100%);
+        border: 6px solid var(--neon-cyan); border-radius: 60px;
+        box-shadow: 0 0 40px rgba(77, 208, 255, 0.7), inset 0 0 30px rgba(77, 208, 255, 0.2), 0 8px 0 #050618;
+        z-index: 30; display: flex; align-items: center; justify-content: center; gap: 20px;
+    }
+    .level-bar .level-notes { display: flex; gap: 15px; align-items: center; }
+    .level-bar .level-note {
+        width: 100px; height: 100px; padding: 10px;
+        background: linear-gradient(180deg, #f0f4ff 0%, #c8d4f0 100%);
+        border-radius: 20px; border: 4px solid #4dd0ff;
+        box-shadow: 0 0 20px rgba(77, 208, 255, 0.7), inset 0 -3px 0 rgba(100, 130, 200, 0.3), inset 0 3px 0 rgba(255, 255, 255, 0.6);
+        object-fit: contain;
+        filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));
+    }
+
+    /* ========== 菜单卡片 ========== */
+    .menu-card {
+        position: absolute; top: 68%; left: 50%; transform: translate(-50%, -50%);
+        width: 620px; padding: 50px 60px 60px;
+        background: rgba(255, 255, 255, 0.92);
+        border-radius: 40px;
+        box-shadow: 0 0 60px rgba(77, 208, 255, 0.7), 0 0 120px rgba(155, 93, 229, 0.4), inset 0 0 40px rgba(200, 220, 255, 0.5), 0 20px 40px rgba(0, 0, 0, 0.5);
+        border: 6px solid rgba(255, 255, 255, 0.7);
+        z-index: 25;
+        display: flex; flex-direction: column; gap: 30px;
+        backdrop-filter: blur(10px);
+    }
+    .menu-card .menu-label {
+        text-align: center;
+        font-family: 'ZCOOL KuaiLe', 'Microsoft YaHei', cursive;
+        font-size: 84px; 
+        font-weight: 900; 
+        letter-spacing: 16px;
+        color: #2a3a9e;
+        text-shadow: none;
+        margin-bottom: 10px;
+    }
+
+    /* ========== 按钮 ========== */
+    .menu-btn {
+        display: flex; align-items: center; justify-content: center; gap: 15px;
+        width: 100%; padding: 28px 40px;
+        border: none; border-radius: 24px;
+        background: linear-gradient(180deg, #5a6b9e 0%, #3a4a7a 100%);
+        font-family: 'ZCOOL KuaiLe', 'Microsoft YaHei', cursive;
+        font-size: 56px; 
+        letter-spacing: 12px; 
+        cursor: pointer;
+        color: #ffffff;
+        text-shadow: none;
+        box-shadow: 0 8px 0 #1a2472, 0 12px 25px rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+        transition: all 0.15s ease;
+        position: relative; overflow: hidden;
+    }
+    .menu-btn::before {
+        content: '';
+        position: absolute; top: 0; left: -100%;
+        width: 100%; height: 100%;
+        background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
+        transition: left 0.6s ease;
+    }
+    .menu-btn:hover {
+        transform: translateY(-3px);
+        background: linear-gradient(180deg, #6b7cae 0%, #4a5a8a 100%);
+        box-shadow: 0 11px 0 #1a2472, 0 15px 30px rgba(0, 0, 0, 0.5), 0 0 30px rgba(77, 208, 255, 0.6), inset 0 2px 0 rgba(255, 255, 255, 0.4);
+    }
+    .menu-btn:hover::before { left: 100%; }
+    .menu-btn:active { transform: translateY(5px); }
+    .menu-btn.start-btn {
+        background: linear-gradient(180deg, #4dd0ff 0%, #1e88e5 100%);
+        box-shadow: 0 8px 0 #0d47a1, 0 12px 25px rgba(0, 0, 0, 0.4), 0 0 30px rgba(77, 208, 255, 0.8), inset 0 2px 0 rgba(255, 255, 255, 0.5), inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+    }
+    .menu-btn.start-btn:hover {
+        background: linear-gradient(180deg, #7de0ff 0%, #2196f3 100%);
+        box-shadow: 0 11px 0 #0d47a1, 0 15px 30px rgba(0, 0, 0, 0.5), 0 0 50px rgba(77, 208, 255, 1), inset 0 2px 0 rgba(255, 255, 255, 0.6);
+    }
+
+    /* ========== 选择火箭卡片 ========== */
+    .select-card {
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        width: 1100px; padding: 50px 60px 60px;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 40px;
+        box-shadow: 0 0 60px rgba(77, 208, 255, 0.8), 0 0 120px rgba(155, 93, 229, 0.5), inset 0 0 40px rgba(200, 220, 255, 0.5), 0 20px 40px rgba(0, 0, 0, 0.5);
+        border: 6px solid rgba(255, 255, 255, 0.8);
+        z-index: 25;
+        display: flex; flex-direction: column; gap: 40px;
+        backdrop-filter: blur(10px);
+    }
+    .select-card .select-label {
+        text-align: center;
+        font-family: 'ZCOOL KuaiLe', 'Microsoft YaHei', cursive;
+        font-size: 90px; 
+        font-weight: 900; 
+        letter-spacing: 16px;
+        color: #2a3a9e;
+        text-shadow: none;
+        margin-bottom: 10px;
+    }
+    .rocket-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 35px; }
+    .rocket-option {
+        position: relative; height: 340px;
+        border: 6px solid #4dd0ff; border-radius: 30px;
+        cursor: pointer;
+        display: flex; justify-content: center; align-items: center;
+        padding: 10px; transition: all 0.25s ease;
+        overflow: hidden;
+        background: radial-gradient(ellipse at 30% 20%, #2a3a9e 0%, #1a2472 40%, #0a0e3f 75%, #050618 100%);
+        box-shadow: 0 0 35px rgba(77, 208, 255, 0.7), 0 0 70px rgba(155, 93, 229, 0.4), inset 0 0 60px rgba(77, 208, 255, 0.2), inset 0 0 120px rgba(155, 93, 229, 0.15), 0 10px 20px rgba(0, 0, 0, 0.4);
+    }
+    .rocket-option img {
+        width: 280px; height: 280px;
+        object-fit: contain;
+        filter: drop-shadow(0 0 30px rgba(77, 208, 255, 0.95)) drop-shadow(0 0 60px rgba(155, 93, 229, 0.5)) drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
+        transition: transform 0.3s ease, filter 0.3s ease;
+        user-select: none; -webkit-user-drag: none;
+        pointer-events: none; position: relative; z-index: 2;
+    }
+    .rocket-option:hover {
+        transform: translateY(-6px) scale(1.02);
+        border-color: #7de0ff;
+        box-shadow: 0 0 55px rgba(77, 208, 255, 1), 0 0 120px rgba(155, 93, 229, 0.6), inset 0 0 70px rgba(77, 208, 255, 0.3), inset 0 0 140px rgba(155, 93, 229, 0.2), 0 16px 30px rgba(0, 0, 0, 0.5);
+    }
+    .rocket-option:hover img { transform: scale(1.12) rotate(-3deg); }
+    .rocket-option.selected {
+        border-color: #f15bb5;
+        box-shadow: 0 0 65px rgba(241, 91, 181, 1), 0 0 130px rgba(241, 91, 181, 0.6), inset 0 0 70px rgba(241, 91, 181, 0.35), inset 0 0 140px rgba(155, 93, 229, 0.25), 0 12px 24px rgba(0, 0, 0, 0.4);
+        transform: translateY(-6px) scale(1.03);
+    }
+    .rocket-option.selected::after {
+        content: '✓';
+        position: absolute; top: 16px; right: 20px;
+        font-size: 52px; font-weight: 900; color: #f15bb5;
+        text-shadow: 0 0 20px #f15bb5, 0 0 40px #f15bb5, 0 0 60px rgba(241, 91, 181, 0.8);
+        font-family: 'Fredoka One', cursive; z-index: 3;
+        animation: checkPulse 1s infinite alternate;
+    }
+    @keyframes checkPulse { 0% { transform: scale(1); } 100% { transform: scale(1.15); } }
+    .rocket-option .rocket-name {
+        position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+        font-family: 'ZCOOL KuaiLe', 'Microsoft YaHei', cursive;
+        font-size: 40px; 
+        letter-spacing: 6px;
+        padding: 8px 32px; border-radius: 22px;
+        color: transparent;
+        -webkit-text-stroke: 2px #ffffff;
+        paint-order: stroke fill;
+        text-shadow: none;
+        white-space: nowrap; z-index: 3;
+        background-color: rgba(10, 14, 63, 0.85);
+        border: 3px solid #ffffff;
+    }
+
+    /* ========== 游戏页 HUD ========== */
+    #top-hud {
+        position: absolute; top: 0; left: 0; right: 0; height: 280px;
+        display: flex; justify-content: space-between; align-items: flex-start;
+        padding: 30px 40px; z-index: 30; pointer-events: none;
+    }
+    .mission-panel {
+        background: linear-gradient(180deg, #2a3a9e 0%, #1a2472 100%);
+        border: 5px solid var(--neon-cyan); border-radius: 28px;
+        padding: 18px 30px;
+        display: flex; align-items: center; gap: 22px;
+        box-shadow: 0 0 30px rgba(77, 208, 255, 0.5), inset 0 0 40px rgba(77, 208, 255, 0.1);
+        pointer-events: auto; min-width: 420px;
+    }
+    .avatar {
+        width: 100px; height: 100px;
+        background: radial-gradient(circle, #fff 30%, #4dd0ff 100%);
+        border-radius: 50%; border: 5px solid var(--neon-cyan);
+        display: flex; justify-content: center; align-items: center;
+        box-shadow: 0 0 25px rgba(77, 208, 255, 0.8); flex-shrink: 0;
+        overflow: hidden; position: relative;
+    }
+    .avatar .avatar-fallback {
+        position: absolute; inset: 0;
+        display: flex; justify-content: center; align-items: center;
+        font-size: 60px; z-index: 0;
+    }
+    .avatar img {
+        width: 100%; height: 100%;
+        object-fit: cover; border-radius: 50%;
+        display: block; z-index: 1; position: relative;
+    }
+    .mission-info { flex: 1; }
+    .mission-label {
+        font-family: 'ZCOOL KuaiLe', 'Microsoft YaHei', cursive;
+        font-size: 30px;
+        letter-spacing: 6px;
+        color: transparent;
+        -webkit-text-stroke: 2px #ffffff;
+        paint-order: stroke fill;
+        text-shadow: none;
+    }
+    .mission-title {
+        font-family: 'ZCOOL KuaiLe', 'Microsoft YaHei', cursive;
+        font-size: 42px;
+        letter-spacing: 6px;
+        color: transparent;
+        -webkit-text-stroke: 2px #ffffff;
+        paint-order: stroke fill;
+        text-shadow: none;
+    }
+    .score-row { display: flex; gap: 22px; margin-top: 8px; font-family: 'Fredoka One', cursive; font-size: 24px; }
+    .score-row .correct { color: var(--perfect-green); text-shadow: 0 0 12px var(--perfect-green); }
+    .score-row .wrong { color: var(--neon-pink); text-shadow: 0 0 12px var(--neon-pink); }
+
+    /* ========== 游戏页标题 ========== */
+    .game-title {
+        position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+        text-align: center;
+        pointer-events: none; z-index: 32;
+    }
+    .game-title .main-title {
+        display: flex; align-items: center; justify-content: center;
+        gap: 16px; 
+        font-size: 110px;
+        font-weight: 900;
+        letter-spacing: 14px; 
+        line-height: 1.15;
+        white-space: nowrap;
+        font-family: 'ZCOOL KuaiLe', 'ZCOOL QingKe HuangYou', 'Ma Shan Zheng', 'Microsoft YaHei', cursive;
+        color: transparent;
+        -webkit-text-stroke: 3.5px #ffffff;
+        paint-order: stroke fill;
+        text-shadow: none;
+    }
+    .game-title .main-title .rocket-icon {
+        font-size: 80px;
+        -webkit-text-stroke: 0; 
+        -webkit-text-fill-color: initial;
+        filter: drop-shadow(0 0 20px rgba(255, 133, 0, 0.9)) drop-shadow(0 0 40px rgba(255, 214, 10, 0.6));
+        animation: rocketIconFloat 3s ease-in-out infinite;
+    }
+    .game-title .subtitle-main {
+        display: inline-block;
+        font-size: 42px; 
+        font-weight: 900;
+        letter-spacing: 6px; 
+        line-height: 1; 
+        margin-top: 8px;
+        font-family: 'ZCOOL KuaiLe', 'ZCOOL QingKe HuangYou', 'Ma Shan Zheng', 'Microsoft YaHei', cursive;
+        color: transparent;
+        -webkit-text-stroke: 2.5px #ffffff;
+        paint-order: stroke fill;
+        text-shadow: none;
+    }
+
+    /* ========== 右上角按钮 ========== */
+    .top-right-btns { display: flex; gap: 20px; pointer-events: auto; z-index: 36; position: relative; }
+    .icon-btn {
+        width: 90px; height: 90px;
+        background: transparent; border: none; padding: 0;
+        cursor: pointer;
+        display: flex; justify-content: center; align-items: center;
+        transition: all 0.15s;
+        filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5));
+        position: relative; z-index: 36; overflow: visible;
+    }
+    .icon-btn:hover { transform: translateY(-3px) scale(1.1); }
+    .icon-btn:active { transform: translateY(2px) scale(1.02); }
+    .icon-btn svg { width: 100%; height: 100%; display: block; pointer-events: none; }
+
+    /* ========== 能量面板 ========== */
+    .energy-panel {
+        position: absolute; top: 195px; left: 40px;
+        display: flex; align-items: center; gap: 18px;
+        background: rgba(10, 14, 63, 0.8); border: 4px solid var(--neon-yellow);
+        border-radius: 20px; padding: 12px 22px;
+        box-shadow: 0 0 25px rgba(255, 214, 10, 0.4);
+        pointer-events: auto; z-index: 30;
+        transition: all 0.3s;
+    }
+    .energy-panel.hit { animation: energyHit 0.6s; box-shadow: 0 0 60px rgba(255, 214, 10, 1), 0 0 100px rgba(255, 133, 0, 0.8); }
+    @keyframes energyHit { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+    .energy-label {
+        font-family: 'ZCOOL KuaiLe', 'Microsoft YaHei', cursive;
+        font-size: 34px; 
+        display: flex; align-items: center; gap: 8px;
+        letter-spacing: 4px;
+        color: transparent;
+        -webkit-text-stroke: 2px #ffffff;
+        paint-order: stroke fill;
+        text-shadow: none;
+    }
+    .energy-bars { display: flex; gap: 5px; }
+    .energy-seg { width: 26px; height: 32px; background: #333; border-radius: 5px; border: 2px solid #555; transition: all 0.3s; }
+    .energy-seg.filled { background: linear-gradient(180deg, #ffd60a 0%, #ff8500 100%); box-shadow: 0 0 14px var(--neon-orange); border-color: var(--neon-yellow); }
+
+    /* ========== 播放按钮 ========== */
+    #play-btn {
+        position: absolute; top: 150px; right: 40px; z-index: 35;
+        background: linear-gradient(180deg, #ffd60a 0%, #ff8500 100%);
+        border: 5px solid var(--neon-yellow); border-radius: 22px;
+        padding: 22px 50px;
+        font-family: 'ZCOOL KuaiLe', 'Microsoft YaHei', cursive;
+        font-size: 48px;
+        cursor: pointer; 
+        letter-spacing: 6px;
+        color: #ffffff;
+        text-shadow: none;
+        box-shadow: 0 0 35px rgba(255, 214, 10, 0.6), inset 0 -8px 0 rgba(0,0,0,0.2);
+        transition: all 0.15s;
+        display: flex; align-items: center; gap: 15px;
+    }
+    #play-btn:hover { transform: translateY(-3px); box-shadow: 0 0 50px rgba(255, 214, 10, 0.9); }
+    #play-btn:active { transform: translateY(3px); }
+    #play-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    #space-scene { position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow: hidden; z-index: 5; pointer-events: none; }
+    #rocket-wrapper {
+        position: absolute; left: 50%; top: 52%;
+        transform: translate(-50%, -50%);
+        transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        z-index: 10;
+        display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    }
+    #rocket-img {
+        width: 720px; height: auto; max-height: 900px;
+        object-fit: contain; display: block;
+        filter: drop-shadow(0 0 60px rgba(77, 208, 255, 0.6)) drop-shadow(0 0 120px rgba(155, 93, 229, 0.4));
+        z-index: 2; position: relative; transition: transform 0.15s;
+    }
+    .rocket-listening #rocket-img { animation: rocketShake 0.15s infinite; }
+    @keyframes rocketShake { 0%,100% { transform: translateX(0); } 50% { transform: translateX(-8px); } }
+    #rocket-flame {
+        width: 280px; height: 0;
+        margin-top: -50px;
+        background: linear-gradient(180deg, #ffd60a 0%, #ff8500 40%, #ff4500 70%, #e74c3c 100%);
+        border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%;
+        transition: height 0.25s ease, opacity 0.25s;
+        filter: blur(4px); opacity: 0; z-index: 1; position: relative;
+    }
+    #rocket-flame::before {
+        content: '';
+        position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+        width: 60%; height: 70%;
+        background: linear-gradient(180deg, #ffffff 0%, #ffd60a 100%);
+        border-radius: 50%; filter: blur(12px); opacity: 0.9;
+    }
+    .flying-battery {
+        position: absolute;
+        width: 240px; height: 240px;
+        object-fit: contain;
+        z-index: 100; pointer-events: none;
+        filter: drop-shadow(0 0 40px rgba(255, 214, 10, 0.9)) drop-shadow(0 0 80px rgba(255, 133, 0, 0.6));
+    }
+    #feedback-text {
+        position: absolute; top: 28%; left: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        font-family: 'ZCOOL KuaiLe', 'ZCOOL QingKe HuangYou', 'Microsoft YaHei', cursive;
+        font-size: 140px;
+        text-align: center; pointer-events: none; z-index: 25; opacity: 0;
+        transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        white-space: nowrap;
+        letter-spacing: 10px;
+    }
+    #feedback-text.show { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    #feedback-text.perfect { 
+        color: transparent;
+        -webkit-text-stroke: 3.5px #00f5a0;
+        paint-order: stroke fill;
+        text-shadow: none;
+    }
+    #feedback-text.try-again { 
+        color: transparent;
+        -webkit-text-stroke: 3.5px #f15bb5;
+        paint-order: stroke fill;
+        text-shadow: none;
+    }
+    .reward-star { position: absolute; font-size: 80px; color: var(--neon-yellow); text-shadow: 0 0 30px var(--neon-yellow); pointer-events: none; z-index: 24; opacity: 0; }
+
+    /* ========== 底部选项面板 ========== */
+    #bottom-panel {
+        position: absolute; bottom: 0; left: 0; right: 0; height: 300px;
+        background: linear-gradient(180deg, #1a2472 0%, #0a0e3f 100%);
+        border-top: 5px solid var(--neon-cyan);
+        box-shadow: 0 -10px 50px rgba(77, 208, 255, 0.3);
+        padding: 25px 50px 35px; z-index: 20;
+        display: flex; flex-direction: column; gap: 15px;
+    }
+    .panel-label {
+        font-family: 'ZCOOL KuaiLe', 'Microsoft YaHei', cursive;
+        font-size: 34px;
+        letter-spacing: 8px; 
+        display: flex; align-items: center; gap: 12px;
+        color: transparent;
+        -webkit-text-stroke: 2px #ffffff;
+        paint-order: stroke fill;
+        text-shadow: none;
+        width: fit-content;
+    }
+    .panel-label::before { content: '▶'; font-size: 20px; }
+    .options-row { display: flex; gap: 35px; justify-content: center; align-items: center; flex: 1; }
+    .option-btn {
+        flex: 1; max-width: 540px; height: 200px;
+        position: relative; cursor: pointer;
+        display: flex; justify-content: center; align-items: center;
+        padding: 8px 20px; border-radius: 32px;
+        transition: all 0.25s ease;
+        background: linear-gradient(180deg, #0d1440 0%, #060a28 100%);
+        border: 5px solid #4dd0ff;
+        box-shadow: 0 0 30px rgba(77, 208, 255, 0.55), inset 0 0 40px rgba(77, 208, 255, 0.25), inset 0 -8px 0 rgba(0, 0, 0, 0.4), inset 0 8px 0 rgba(255, 255, 255, 0.05), 0 10px 20px rgba(0, 0, 0, 0.4);
+        overflow: hidden;
+    }
+    .option-btn::before {
+        content: '';
+        position: absolute; inset: 12px;
+        background: linear-gradient(180deg, #f0f4ff 0%, #c8d4f0 100%);
+        border-radius: 20px;
+        box-shadow: inset 0 -4px 12px rgba(100, 130, 200, 0.35), inset 0 6px 8px rgba(255, 255, 255, 0.7);
+        z-index: 1; pointer-events: none;
+    }
+    .option-btn .notes-display, .option-btn .key-badge { position: relative; z-index: 3; }
+    .option-btn:hover {
+        transform: translateY(-4px);
+        border-color: #7de0ff;
+        box-shadow: 0 0 45px rgba(77, 208, 255, 0.9), inset 0 0 60px rgba(77, 208, 255, 0.4), inset 0 -8px 0 rgba(0, 0, 0, 0.4), inset 0 8px 0 rgba(255, 255, 255, 0.08), 0 14px 28px rgba(0, 0, 0, 0.5);
+    }
+    .option-btn.correct {
+        border-color: #f15bb5;
+        background: linear-gradient(180deg, #2a0a30 0%, #150620 100%);
+        box-shadow: 0 0 55px rgba(241, 91, 181, 0.95), 0 0 90px rgba(241, 91, 181, 0.5), inset 0 0 50px rgba(241, 91, 181, 0.4), inset 0 -8px 0 rgba(0, 0, 0, 0.4), 0 10px 20px rgba(0, 0, 0, 0.4);
+        animation: correctPulse 0.5s;
+    }
+    @keyframes correctPulse { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-5px) scale(1.04); } }
+    .option-btn.correct::after {
+        content: '';
+        position: absolute; bottom: -12px; left: 15%; right: 15%; height: 8px;
+        background: linear-gradient(90deg, transparent 0%, #f15bb5 20%, #ff9bff 50%, #f15bb5 80%, transparent 100%);
+        border-radius: 4px;
+        box-shadow: 0 0 20px #f15bb5, 0 0 40px #f15bb5, 0 0 60px rgba(241, 91, 181, 0.6);
+        animation: neonBarPulse 0.6s infinite alternate;
+        z-index: 5;
+    }
+    @keyframes neonBarPulse { 0% { opacity: 0.7; transform: scaleX(0.9); } 100% { opacity: 1; transform: scaleX(1.05); } }
+    .option-btn.wrong {
+        border-color: #ff3d7f;
+        background: linear-gradient(180deg, #2a0a1a 0%, #150508 100%);
+        box-shadow: 0 0 30px rgba(255, 61, 127, 0.9), inset 0 0 30px rgba(255, 61, 127, 0.4);
+        animation: shake 0.4s;
+    }
+    @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+    .option-btn .key-badge {
+        position: absolute; top: 18px; left: 22px;
+        background: linear-gradient(180deg, #1a2472, #0a0e3f);
+        color: var(--neon-cyan); font-family: 'Fredoka One', cursive; font-size: 24px;
+        width: 42px; height: 42px;
+        display: flex; justify-content: center; align-items: center;
+        border-radius: 10px; border: 3px solid var(--neon-cyan);
+        box-shadow: 0 0 12px rgba(77, 208, 255, 0.6);
+        z-index: 4;
+    }
+    .notes-display {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        height: 100%;
+        width: 100%;
+        padding: 0 60px 0 60px;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+    .note-img {
+        height: 110px;
+        width: auto;
+        max-width: 95px;
+        object-fit: contain;
+        display: block;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));
+        user-select: none; -webkit-user-drag: none;
+        pointer-events: none;
+        vertical-align: middle;
+        margin: 0 -2px;
+        flex-shrink: 1;
+    }
+    .option-btn.correct .note-img { filter: drop-shadow(0 0 15px var(--perfect-green)) brightness(1.1); }
+    .option-btn.wrong .note-img { filter: drop-shadow(0 0 15px var(--neon-pink)) brightness(0.85); }
+
+    /* ========== 连击显示 ========== */
+    #combo-display {
+        position: absolute; top: 320px; right: 40px;
+        font-family: 'ZCOOL KuaiLe', 'ZCOOL QingKe HuangYou', 'Microsoft YaHei', cursive;
+        font-size: 56px;
+        opacity: 0; transform: scale(0.5);
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        z-index: 30; pointer-events: none;
+        letter-spacing: 6px;
+        color: transparent;
+        -webkit-text-stroke: 2.5px #ffffff;
+        paint-order: stroke fill;
+        text-shadow: none;
+    }
+    #combo-display.show { opacity: 1; transform: scale(1); }
+
+    /* ========== 徽章弹窗 ========== */
+    #badge-overlay {
+        position: absolute; inset: 0;
+        background: rgba(5, 6, 24, 0.85);
+        backdrop-filter: blur(12px);
+        display: flex; justify-content: center; align-items: center;
+        z-index: 300;
+        opacity: 0; visibility: hidden;
+        transition: opacity 0.4s ease, visibility 0.4s ease;
+    }
+    #badge-overlay.show { opacity: 1; visibility: visible; }
+
+    .badge-container {
+        position: relative;
+        width: 620px; height: 720px;
+        display: flex; justify-content: center; align-items: center;
+        transform: scale(0);
+        transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    #badge-overlay.show .badge-container { transform: scale(1); }
+
+    .badge {
+        position: relative;
+        width: 520px; height: 520px; border-radius: 50%;
+        background: linear-gradient(180deg, #2a3a9e 0%, #1a2472 100%);
+        border: 14px solid #4dd0ff;
+        box-shadow: 0 0 60px rgba(77, 208, 255, 0.9), 0 0 120px rgba(77, 208, 255, 0.5), inset 0 0 60px rgba(0, 0, 0, 0.4);
+        animation: badgePulse 2s ease-in-out infinite alternate;
+    }
+    @keyframes badgePulse {
+        0% { box-shadow: 0 0 60px rgba(77, 208, 255, 0.9), 0 0 120px rgba(77, 208, 255, 0.5), inset 0 0 60px rgba(0, 0, 0, 0.4); }
+        100% { box-shadow: 0 0 90px rgba(77, 208, 255, 1), 0 0 160px rgba(77, 208, 255, 0.7), inset 0 0 60px rgba(0, 0, 0, 0.4); }
+    }
+    .badge-alien {
+        position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 220px; line-height: 1; z-index: 3;
+        filter: drop-shadow(0 0 30px rgba(0, 245, 160, 0.9)) drop-shadow(0 0 60px rgba(0, 245, 160, 0.5));
+        animation: alienBob 2s ease-in-out infinite;
+    }
+    @keyframes alienBob {
+        0%,100% { transform: translate(-50%, -50%) scale(1) rotate(-3deg); }
+        50% { transform: translate(-50%, -54%) scale(1.05) rotate(3deg); }
+    }
+    .badge-banner {
+        position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+        padding: 18px 60px;
+        background: linear-gradient(180deg, #fff3a8 0%, #ffd60a 40%, #ffa500 100%);
+        border: 6px solid #ffffff; border-radius: 40px;
+        font-family: 'ZCOOL KuaiLe', 'Microsoft YaHei', cursive;
+        font-size: 64px; 
+        font-weight: 900; 
+        letter-spacing: 8px;
+        color: #0a0e3f;
+        text-shadow: none;
+        box-shadow: 0 8px 0 #0a1440, 0 0 40px rgba(255, 214, 10, 1), 0 0 80px rgba(255, 214, 10, 0.6);
+        z-index: 5;
+        animation: bannerFloat 2s ease-in-out infinite alternate;
+    }
+    @keyframes bannerFloat {
+        0% { transform: translateX(-50%) translateY(0); }
+        100% { transform: translateX(-50%) translateY(-6px); }
+    }
+    .badge-stars {
+        position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%);
+        display: flex; gap: 24px; z-index: 5;
+    }
+    .badge-star {
+        font-size: 68px; color: #ffd60a;
+        text-shadow: 0 0 20px #ffd60a, 0 0 40px #ff8500, 0 0 60px rgba(255, 133, 0, 0.6), 0 3px 0 #a85b00;
+        animation: starPop 1.5s ease-in-out infinite;
+    }
+    .badge-star:nth-child(1) { animation-delay: 0s; }
+    .badge-star:nth-child(2) { animation-delay: 0.2s; }
+    .badge-star:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes starPop {
+        0%,100% { transform: scale(1) rotate(0deg); }
+        50% { transform: scale(1.25) rotate(15deg); }
+    }
+
+    /* ========== 竞速页 ========== */
+    #race-screen {
+        position: absolute; inset: 0;
+        background: transparent;
+        overflow: hidden;
+        z-index: 45;
+        opacity: 0; visibility: hidden;
+        transition: opacity 0.5s ease, visibility 0.5s ease;
+    }
+    #race-screen.active { opacity: 1; visibility: visible; z-index: 45; }
+
+    .race-track {
+        position: absolute;
+        left: 0; top: 15%; bottom: 5%; right: 0;
+        z-index: 5;
+        pointer-events: none;
+        overflow: visible;
+    }
+    .racer {
+        position: absolute;
+        bottom: -20%;
+        z-index: 6;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: bottom 0.05s linear;
+    }
+    /* 关键修改：火箭与外星飞船更靠近 */
+    .racer.rocket-racer {
+        left: 26%;
+        width: 400px; height: 560px;
+        transform: translateX(-50%);
+    }
+    .racer.alien-racer {
+        right: 26%;
+        width: 400px; height: 400px;
+        transform: translateX(50%);
+    }
+    .racer img {
+        width: 100%; height: 100%;
+        object-fit: contain;
+    }
+    .racer.rocket-racer img {
+        filter: drop-shadow(0 0 40px rgba(77, 208, 255, 0.9)) drop-shadow(0 0 80px rgba(255, 133, 0, 0.5));
+    }
+    .racer.alien-racer img {
+        filter: drop-shadow(0 0 40px rgba(0, 245, 160, 0.9)) drop-shadow(0 0 80px rgba(0, 245, 160, 0.5));
+    }
+    .alien-ship-beam {
+        position: absolute;
+        top: 85%;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-top: -10px;
+        width: 90%;
+        height: 170px;
+        background: 
+            radial-gradient(ellipse 60% 40% at 50% 10%, rgba(255, 255, 255, 0.7) 0%, transparent 70%),
+            linear-gradient(180deg, 
+                rgba(0, 245, 160, 0.95) 0%, 
+                rgba(0, 245, 160, 0.75) 20%,
+                rgba(0, 220, 140, 0.55) 40%, 
+                rgba(0, 200, 120, 0.35) 60%, 
+                rgba(0, 245, 160, 0.18) 80%,
+                transparent 100%);
+        clip-path: polygon(22% 0%, 78% 0%, 88% 18%, 92% 38%, 100% 100%, 0% 100%, 8% 38%, 12% 18%);
+        opacity: 0;
+        transition: opacity 0.35s ease;
+        pointer-events: none;
+        filter: blur(2.5px) drop-shadow(0 0 20px rgba(0, 245, 160, 0.8));
+        transform-origin: 50% 0%;
+    }
+    .alien-ship-beam.active { 
+        opacity: 1; 
+        animation: alienBeamPulse 0.18s infinite alternate;
+    }
+    @keyframes alienBeamPulse {
+        0%   { transform: translateX(-50%) scaleY(1)    scaleX(1);    filter: blur(2.5px) drop-shadow(0 0 18px rgba(0, 245, 160, 0.7)); }
+        100% { transform: translateX(-50%) scaleY(1.25) scaleX(0.92); filter: blur(3.5px) drop-shadow(0 0 28px rgba(0, 245, 160, 1)); }
+    }
+    .alien-ship-beam::after {
+        content: '';
+        position: absolute;
+        left: 50%; top: 0;
+        transform: translateX(-50%);
+        width: 45%;
+        height: 70%;
+        background: linear-gradient(180deg,
+            rgba(255, 255, 255, 0.9) 0%,
+            rgba(180, 255, 220, 0.75) 30%,
+            rgba(0, 245, 160, 0.5) 70%,
+            transparent 100%);
+        border-radius: 50% 50% 40% 40% / 30% 30% 70% 70%;
+        filter: blur(8px);
+        opacity: 0.85;
+        pointer-events: none;
+        animation: alienCorePulse 0.22s infinite alternate;
+    }
+    @keyframes alienCorePulse {
+        0%   { opacity: 0.7; transform: translateX(-50%) scaleY(1); }
+        100% { opacity: 1;   transform: translateX(-50%) scaleY(1.15); }
+    }
+    .racer-flame {
+        position: absolute;
+        top: 85%;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-top: -10px;
+        width: 100px; height: 150px;
+        background: linear-gradient(180deg, 
+            rgba(255, 214, 10, 0.95) 0%, 
+            rgba(255, 133, 0, 0.85) 30%, 
+            rgba(255, 69, 0, 0.7) 60%, 
+            rgba(231, 76, 60, 0.5) 100%);
+        border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%;
+        filter: blur(6px); opacity: 0;
+        animation: flamePulse 0.15s infinite alternate;
+        pointer-events: none;
+    }
+    .racer-flame.active { opacity: 1; }
+    @keyframes flamePulse {
+        0% { transform: translateX(-50%) scaleY(1) scaleX(1); }
+        100% { transform: translateX(-50%) scaleY(1.3) scaleX(0.9); }
+    }
+
+    /* ========== 倒计时 ========== */
+    #countdown {
+        position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        font-family: 'Fredoka One', 'ZCOOL KuaiLe', 'Microsoft YaHei', cursive;
+        font-size: 400px; 
+        font-weight: 900;
+        color: transparent;
+        -webkit-text-stroke: 8px #ffffff;
+        paint-order: stroke fill;
+        text-shadow: none;
+        opacity: 0; z-index: 50; pointer-events: none;
+        letter-spacing: 8px;
+    }
+    #countdown.pop { animation: countdownPop 1s ease-out; }
+    @keyframes countdownPop {
+        0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+        30% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+        70% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+        100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+    }
+
+    /* ========== 竞速结果 ========== */
+    #race-result {
+        position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        font-family: 'ZCOOL KuaiLe', 'ZCOOL QingKe HuangYou', 'Microsoft YaHei', cursive;
+        font-size: 260px; 
+        font-weight: 900;
+        color: transparent;
+        -webkit-text-stroke: 7px #ffffff;
+        paint-order: stroke fill;
+        text-shadow: none;
+        opacity: 0; z-index: 55; pointer-events: none; white-space: nowrap;
+        letter-spacing: 12px;
+    }
+    #race-result.show { animation: resultPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+    @keyframes resultPop {
+        0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+        100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+
+    /* ========== 结算页 ========== */
+    #result-screen {
+        position: absolute; inset: 0;
+        background: rgba(5, 6, 24, 0.88);
+        backdrop-filter: blur(15px);
+        display: flex; justify-content: center; align-items: center;
+        z-index: 250;
+        opacity: 0; visibility: hidden;
+        transition: opacity 0.5s ease, visibility 0.5s ease;
+    }
+    #result-screen.show { opacity: 1; visibility: visible; }
+
+    .result-card {
+        position: relative;
+        width: 900px;
+        padding: 50px 60px 60px;
+        background: #ffffff;
+        border-radius: 30px;
+        border: 8px solid #ffffff;
+        box-shadow: 
+            0 0 60px rgba(77, 208, 255, 0.7),
+            0 0 120px rgba(155, 93, 229, 0.4),
+            0 25px 50px rgba(0, 0, 0, 0.5);
+        text-align: center;
+        transform: scale(0.7);
+        transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    #result-screen.show .result-card { transform: scale(1); }
+
+    .result-headline {
+        font-family: 'ZCOOL KuaiLe', 'Microsoft YaHei', cursive;
+        font-size: 84px; 
+        font-weight: 900; 
+        letter-spacing: 8px;
+        margin-bottom: 20px;
+        color: #2a3a9e;
+        text-shadow: none;
+    }
+    .result-stars {
+        display: flex; justify-content: center; gap: 12px; margin-bottom: 30px;
+    }
+    .result-star {
+        font-size: 68px; color: #f15bb5;
+        text-shadow: 0 0 15px rgba(241, 91, 181, 0.8), 0 0 30px rgba(241, 91, 181, 0.4);
+        animation: resultStarPop 0.6s ease-out;
+    }
+    .result-star.empty { color: #d0d4e0; text-shadow: none; }
+    @keyframes resultStarPop {
+        0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+        100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    .result-row {
+        display: flex; align-items: center; justify-content: center;
+        gap: 30px; margin-bottom: 24px;
+    }
+    .result-label {
+        font-family: 'ZCOOL KuaiLe', 'Microsoft YaHei', cursive;
+        font-size: 52px; 
+        font-weight: 900; 
+        letter-spacing: 12px; 
+        min-width: 220px; 
+        text-align: left;
+        color: #2a3a9e;
+        text-shadow: none;
+    }
+    .result-notes-bar {
+        display: flex; justify-content: center; align-items: center;
+        gap: 20px;
+        padding: 22px 40px;
+        background: linear-gradient(180deg, #2a3a9e 0%, #1a2472 100%);
+        border: 6px solid var(--neon-cyan); border-radius: 60px;
+        box-shadow: 0 0 40px rgba(77, 208, 255, 0.7), inset 0 0 30px rgba(77, 208, 255, 0.2), 0 8px 0 #050618;
+        margin-bottom: 30px;
+    }
+    .result-notes-bar .level-note {
+        width: 100px; height: 100px; padding: 10px;
+        background: linear-gradient(180deg, #f0f4ff 0%, #c8d4f0 100%);
+        border-radius: 20px; border: 4px solid #4dd0ff;
+        box-shadow: 0 0 20px rgba(77, 208, 255, 0.7), inset 0 -3px 0 rgba(100, 130, 200, 0.3), inset 0 3px 0 rgba(255, 255, 255, 0.6);
+        object-fit: contain;
+        filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));
+    }
+    .result-stats {
+        display: flex; flex-direction: column; gap: 8px;
+        font-family: 'Fredoka One', cursive; font-size: 48px; font-weight: 900;
+    }
+    .result-stat-correct { color: #00c853; display: flex; align-items: center; gap: 15px; }
+    .result-stat-wrong { color: #e74c3c; display: flex; align-items: center; gap: 15px; }
+    .result-check { font-size: 56px; color: #00c853; text-shadow: 0 0 10px rgba(0, 200, 83, 0.5); }
+    .result-cross { font-size: 56px; color: #e74c3c; text-shadow: 0 0 10px rgba(231, 76, 60, 0.5); }
+
+    .result-play-again {
+        display: inline-block; padding: 18px 50px;
+        background: #5a6b9e; color: #ffffff;
+        font-family: 'ZCOOL KuaiLe', 'Microsoft YaHei', cursive;
+        font-size: 36px;
+        letter-spacing: 8px; border: none; border-radius: 18px;
+        cursor: pointer;
+        text-shadow: none;
+        box-shadow: 0 6px 0 #3a4a7a, 0 0 20px rgba(90, 107, 158, 0.6);
+        transition: all 0.15s ease;
+        margin-top: 20px;
+    }
+    .result-play-again:hover {
+        transform: translateY(-3px);
+        background: #6b7cae;
+        box-shadow: 0 9px 0 #3a4a7a, 0 0 30px rgba(90, 107, 158, 0.8);
+    }
+    .result-play-again:active { transform: translateY(3px); box-shadow: 0 3px 0 #3a4a7a; }
+
+    .result-back-menu {
+        display: inline-block; padding: 18px 40px;
+        background: #4dd0ff; color: #ffffff;
+        font-family: 'ZCOOL KuaiLe', 'Microsoft YaHei', cursive;
+        font-size: 36px;
+        letter-spacing: 8px; border: none; border-radius: 18px;
+        cursor: pointer;
+        text-shadow: none;
+        box-shadow: 0 6px 0 #0d47a1, 0 0 20px rgba(77, 208, 255, 0.6);
+        transition: all 0.15s ease;
+        margin-top: 20px; margin-left: 15px;
+    }
+    .result-back-menu:hover {
+        transform: translateY(-3px);
+        background: #7de0ff;
+        box-shadow: 0 9px 0 #0d47a1, 0 0 30px rgba(77, 208, 255, 0.8);
+    }
+    .result-back-menu:active { transform: translateY(3px); box-shadow: 0 3px 0 #0d47a1; }
+
+    .hidden-audio {
+        position: absolute;
+        width: 0; height: 0;
+        opacity: 0; pointer-events: none;
+        left: -9999px; top: -9999px;
+    }
+
+    /* ==========================================================
+       玩法说明 弹窗
+       ========================================================== */
+    #howto-overlay {
+        position: absolute; inset: 0;
+        background: rgba(5, 6, 24, 0.78);
+        backdrop-filter: blur(10px);
+        display: flex; justify-content: center; align-items: center;
+        z-index: 400;
+        opacity: 0; visibility: hidden;
+        transition: opacity 0.35s ease, visibility 0.35s ease;
+    }
+    #howto-overlay.show { opacity: 1; visibility: visible; }
+
+    .howto-card {
+        position: relative;
+        width: 1100px;
+        max-height: 820px;
+        background: linear-gradient(180deg, #ffffff 0%, #f0f4ff 100%);
+        border-radius: 30px;
+        border: 6px solid #4dd0ff;
+        padding: 50px 70px 55px;
+        box-shadow:
+            0 0 60px rgba(77, 208, 255, 0.7),
+            0 0 120px rgba(155, 93, 229, 0.4),
+            0 25px 50px rgba(0, 0, 0, 0.5);
+        transform: scale(0.85);
+        transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        overflow-y: auto;
+    }
+    #howto-overlay.show .howto-card { transform: scale(1); }
+
+    .howto-close {
+        position: absolute; top: 22px; right: 22px;
+        width: 60px; height: 60px;
+        background: linear-gradient(180deg, #4a5a8a 0%, #2c3e50 100%);
+        color: #ffffff; border: none; border-radius: 14px;
+        font-family: 'Fredoka One', cursive; font-size: 30px;
+        cursor: pointer;
+        display: flex; justify-content: center; align-items: center;
+        box-shadow: 0 4px 0 #1a2472, 0 6px 12px rgba(0, 0, 0, 0.4);
+        transition: all 0.15s ease;
+        z-index: 5;
+    }
+    .howto-close:hover {
+        transform: translateY(-2px);
+        background: linear-gradient(180deg, #5a6b9e 0%, #3a4a7a 100%);
+        box-shadow: 0 6px 0 #1a2472, 0 8px 16px rgba(0, 0, 0, 0.5);
+    }
+    .howto-close:active { transform: translateY(2px); box-shadow: 0 2px 0 #1a2472; }
+
+    .howto-title {
+        text-align: center;
+        font-family: 'ZCOOL KuaiLe', 'Microsoft YaHei', cursive;
+        font-size: 90px; 
+        font-weight: 900;
+        letter-spacing: 12px;
+        color: #2a3a9e;
+        text-shadow: none;
+        margin-bottom: 25px;
+    }
+
+    .howto-section-label {
+        text-align: center;
+        font-family: 'ZCOOL KuaiLe', 'Microsoft YaHei', cursive;
+        font-size: 48px; 
+        font-weight: 900;
+        letter-spacing: 10px;
+        color: #4a5a8a;
+        text-shadow: none;
+        margin-top: 22px;
+        margin-bottom: 14px;
+    }
+
+    .howto-text {
+        font-family: 'Nunito', 'Microsoft YaHei', sans-serif;
+        font-size: 26px;
+        line-height: 1.75;
+        color: #2c3e50;
+        text-align: center;
+        padding: 0 30px;
+        margin-bottom: 12px;
+    }
+
+    .howto-footer {
+        text-align: center;
+        font-family: 'ZCOOL KuaiLe', 'Microsoft YaHei', cursive;
+        font-size: 40px; 
+        font-weight: 900;
+        margin-top: 30px;
+        letter-spacing: 6px;
+        color: #2a3a9e;
+        text-shadow: none;
+    }
+</style>
+</head>
+<body>
+
+<div id="screen-wrapper">
+    <div id="stage">
+
+        <audio id="bgm-audio" class="hidden-audio" preload="auto" loop>
+            <source src="audios/background_music.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="countdown-audio" class="hidden-audio" preload="auto">
+            <source src="audios/countdown.mp3" type="audio/mpeg">
+        </audio>
+
+        <div class="scroll-layer" id="layer-stars">
+            <div class="stars-bg" id="stars-bg"></div>
+        </div>
+
+        <div class="scroll-layer" id="layer-planets">
+            <div class="layer-content">
+                <img class="scene-img earth-img" src="assets/earth.png" alt="" onerror="this.style.display='none';">
+                <img class="scene-img saturn-img" src="assets/saturn.png" alt="" onerror="this.style.display='none';">
+                <img class="scene-img blackhole-img" src="assets/blackhole.png" alt="" onerror="this.style.display='none';">
+                <img class="scene-img satellite-img" src="assets/satellite.png" alt="" onerror="this.style.display='none';">
+                <img class="scene-img alien-img" src="assets/alien.png" alt="" onerror="this.style.display='none';">
+            </div>
+            <div class="layer-content" style="top: 1080px;">
+                <img class="scene-img earth-img" src="assets/earth.png" alt="" onerror="this.style.display='none';">
+                <img class="scene-img saturn-img" src="assets/saturn.png" alt="" onerror="this.style.display='none';">
+                <img class="scene-img blackhole-img" src="assets/blackhole.png" alt="" onerror="this.style.display='none';">
+                <img class="scene-img satellite-img" src="assets/satellite.png" alt="" onerror="this.style.display='none';">
+                <img class="scene-img alien-img" src="assets/alien.png" alt="" onerror="this.style.display='none';">
+            </div>
+        </div>
+
+        <div class="scroll-layer" id="layer-meteors">
+            <div class="layer-content">
+                <img class="flying-meteor meteor-1" src="assets/meteor1.png" alt="" onerror="this.style.display='none';">
+                <img class="flying-meteor meteor-2" src="assets/meteor2.png" alt="" onerror="this.style.display='none';">
+                <img class="flying-meteor meteor-3" src="assets/meteor2.png" alt="" onerror="this.style.display='none';">
+                <img class="flying-meteor meteor-4" src="assets/meteor1.png" alt="" onerror="this.style.display='none';">
+            </div>
+            <div class="layer-content" style="top: 1080px;">
+                <img class="flying-meteor meteor-1" src="assets/meteor1.png" alt="" onerror="this.style.display='none';">
+                <img class="flying-meteor meteor-2" src="assets/meteor2.png" alt="" onerror="this.style.display='none';">
+                <img class="flying-meteor meteor-3" src="assets/meteor2.png" alt="" onerror="this.style.display='none';">
+                <img class="flying-meteor meteor-4" src="assets/meteor1.png" alt="" onerror="this.style.display='none';">
+            </div>
+        </div>
+
+        <div class="screen active" id="menu-screen">
+            <img class="flying-rocket rocket-1" src="assets/rocket.png" alt="" onerror="this.style.display='none';">
+            <img class="flying-rocket rocket-2" src="assets/rocket2.png" alt="" onerror="this.style.display='none';">
+            <img class="flying-rocket rocket-3" src="assets/rocket3.png" alt="" onerror="this.style.display='none';">
+
+            <div class="menu-title">
+                <div class="main-title">
+                    <span class="rocket-icon">🚀</span>
+                    太空节奏挑战
+                    <span class="rocket-icon">🚀</span>
+                </div>
+            </div>
+
+            <div class="level-bar">
+                <span class="level-notes">
+                    <img class="level-note" src="assets/quarter.png" alt="" onerror="this.style.display='none';">
+                    <img class="level-note" src="assets/eighth.png" alt="" onerror="this.style.display='none';">
+                    <img class="level-note" src="assets/rest.png" alt="" onerror="this.style.display='none';">
+                    <img class="level-note" src="assets/quarter.png" alt="" onerror="this.style.display='none';">
+                </span>
+            </div>
+
+            <div class="menu-card">
+                <div class="menu-label">菜单</div>
+                <button class="menu-btn start-btn" id="start-btn">开始</button>
+                <button class="menu-btn" id="howto-btn">玩法说明</button>
+            </div>
+        </div>
+
+        <div class="screen" id="select-screen">
+            <div class="select-card">
+                <div class="select-label">选择你的火箭</div>
+                <div class="rocket-grid">
+                    <div class="rocket-option" data-rocket="assets/rocket.png">
+                        <img src="assets/rocket.png" alt="" onerror="this.style.display='none';">
+                        <div class="rocket-name">火箭 1</div>
+                    </div>
+                    <div class="rocket-option" data-rocket="assets/rocket2.png">
+                        <img src="assets/rocket2.png" alt="" onerror="this.style.display='none';">
+                        <div class="rocket-name">火箭 2</div>
+                    </div>
+                    <div class="rocket-option" data-rocket="assets/rocket3.png">
+                        <img src="assets/rocket3.png" alt="" onerror="this.style.display='none';">
+                        <div class="rocket-name">火箭 3</div>
+                    </div>
+                    <div class="rocket-option" data-rocket="assets/rocket4.png">
+                        <img src="assets/rocket4.png" alt="" onerror="this.style.display='none';">
+                        <div class="rocket-name">火箭 4</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="screen" id="game-screen">
+            <div id="top-hud">
+                <div class="mission-panel">
+                    <div class="avatar">
+                        <div class="avatar-fallback">👨‍🚀</div>
+                        <img src="assets/astronaut.png" alt="Astronaut" onerror="this.style.display='none';">
+                    </div>
+                    <div class="mission-info">
+                        <div class="mission-label">任务</div>
+                        <div class="mission-title">节奏探险家</div>
+                        <div class="score-row">
+                            <span class="correct">✓ <span id="score-correct">0</span></span>
+                            <span class="wrong">✗ <span id="score-wrong">0</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="game-title">
+                    <div class="main-title">
+                        <span class="rocket-icon">🚀</span>
+                        太空节奏挑战
+                        <span class="rocket-icon">🚀</span>
+                    </div>
+                    <div class="subtitle-main">跟上节奏，为火箭充能！</div>
+                </div>
+
+                <div class="top-right-btns">
+                    <button class="icon-btn" id="help-btn" title="帮助">
+                        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M 30 30 Q 30 15, 50 15 Q 70 15, 70 32 Q 70 45, 55 52 Q 48 56, 48 68 L 48 72 Q 48 78, 42 78 L 38 78 Q 32 78, 32 72 L 32 68 Q 32 52, 45 44 Q 55 38, 55 30 Q 55 25, 50 25 Q 45 25, 45 30 Q 45 35, 40 35 Q 30 35, 30 30 Z" fill="#ffffff"/>
+                            <circle cx="45" cy="88" r="5" fill="#ffffff"/>
+                        </svg>
+                    </button>
+                    <button class="icon-btn" id="home-btn" title="回到菜单">
+                        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M 12 52 L 50 18 L 88 52" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M 20 50 L 20 86 L 80 86 L 80 50" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M 42 86 L 42 65 L 58 65 L 58 86" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="energy-panel" id="energy-panel">
+                <div class="energy-label">⚡ 能量</div>
+                <div class="energy-bars" id="energy-bars"></div>
+            </div>
+
+            <button id="play-btn">播放 ▶</button>
+
+            <div id="combo-display">连击 ×2！</div>
+
+            <div id="space-scene">
+                <div id="rocket-wrapper">
+                    <img id="rocket-img" src="assets/rocket.png" alt="Rocket" onerror="this.style.display='none'; this.parentElement.style.display='none';">
+                    <div id="rocket-flame"></div>
+                </div>
+                <div id="feedback-text">完美！</div>
+            </div>
+
+            <div id="bottom-panel">
+                <div class="panel-label">选出正确的 4 拍节奏</div>
+                <div class="options-row" id="options-row">
+                    <button class="option-btn" data-index="0"><div class="key-badge">1</div></button>
+                    <button class="option-btn" data-index="1"><div class="key-badge">2</div></button>
+                    <button class="option-btn" data-index="2"><div class="key-badge">3</div></button>
+                </div>
+            </div>
+        </div>
+
+        <div id="badge-overlay">
+            <div class="badge-container">
+                <div class="badge">
+                    <div class="badge-alien">👽</div>
+                </div>
+                <div class="badge-banner">外星挑战</div>
+                <div class="badge-stars">
+                    <span class="badge-star">★</span>
+                    <span class="badge-star">★</span>
+                    <span class="badge-star">★</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="race-screen">
+            <div class="race-track">
+                <div class="racer rocket-racer" id="racer-rocket">
+                    <img id="racer-rocket-img" src="assets/rocket.png" alt="" onerror="this.style.display='none';">
+                    <div class="racer-flame" id="racer-rocket-flame"></div>
+                </div>
+
+                <div class="racer alien-racer" id="racer-alien">
+                    <img id="racer-alien-img" src="assets/alien-spaceship.png" alt="" onerror="this.style.display='none';">
+                    <div class="alien-ship-beam" id="alien-beam"></div>
+                </div>
+            </div>
+
+            <div id="countdown"></div>
+            <div id="race-result">🚀 胜利！</div>
+        </div>
+
+        <div id="result-screen">
+            <div class="result-card">
+                <div class="result-headline" id="result-headline">超级飞人！</div>
+
+                <div class="result-stars" id="result-stars"></div>
+
+                <div class="result-notes-bar">
+                    <img class="level-note" src="assets/quarter.png" alt="" onerror="this.style.display='none';">
+                    <img class="level-note" src="assets/eighth.png" alt="" onerror="this.style.display='none';">
+                    <img class="level-note" src="assets/rest.png" alt="" onerror="this.style.display='none';">
+                    <img class="level-note" src="assets/quarter.png" alt="" onerror="this.style.display='none';">
+                </div>
+
+                <div class="result-row">
+                    <div class="result-label">成绩</div>
+                    <div class="result-stats">
+                        <div class="result-stat-correct">
+                            <span class="result-check">✓</span>
+                            <span id="result-correct-num">0</span>
+                        </div>
+                        <div class="result-stat-wrong">
+                            <span class="result-cross">✗</span>
+                            <span id="result-wrong-num">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <button class="result-play-again" id="result-play-again">再玩一次</button>
+                    <button class="result-back-menu" id="result-back-menu">菜单</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 玩法说明 弹窗 -->
+        <div id="howto-overlay">
+            <div class="howto-card">
+                <button class="howto-close" id="howto-close">✕</button>
+                <div class="howto-title">如何游玩</div>
+
+                <div class="howto-section-label">故事背景</div>
+                <div class="howto-text">
+                    你只有几次为火箭加油的机会，准备迎战外星飞船。通过回答节奏问题来获取能量，帮助你的团队有节奏地工作，为火箭注入充足的燃料！如果你和团队不能默契配合，可能会在决战前耗尽能量。
+                </div>
+
+                <div class="howto-section-label">玩法说明</div>
+                <div class="howto-text">
+                    点击"开始"（或按空格键），聆听节奏模式。点击节奏按钮（或键盘按键 1-3）来选择你听到的节奏。你答对的问题越多，获得的能量就越多，你的火箭就能在挑战外星飞船时飞得越快！
+                </div>
+
+                <div class="howto-footer">祝你好运，玩得开心！</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==========================================================
+    // 屏幕自适应
+    // ==========================================================
+    function fitStage() {
+        const stage = document.getElementById('stage');
+        const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+        stage.style.transform = `scale(${scale})`;
+    }
+    window.addEventListener('resize', fitStage);
+    fitStage();
+
+    // ==========================================================
+    // 生成背景星星
+    // ==========================================================
+    function createStars() {
+        const starsBg = document.getElementById('stars-bg');
+        for (let i = 0; i < 120; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            const size = Math.random() * 4 + 1;
+            star.style.width = size + 'px';
+            star.style.height = size + 'px';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            const rand = Math.random();
+            if (rand < 0.15) {
+                star.classList.add('twinkle-bright');
+                star.style.animationDelay = (Math.random() * 2) + 's';
+                star.style.animationDuration = (1.2 + Math.random() * 1.5) + 's';
+            } else if (rand < 0.55) {
+                star.classList.add('twinkle');
+                star.style.animationDelay = (Math.random() * 3) + 's';
+                star.style.animationDuration = (1.5 + Math.random() * 2.5) + 's';
+            } else {
+                star.style.opacity = 0.4 + Math.random() * 0.5;
+            }
+            starsBg.appendChild(star);
+        }
+    }
+
+    // ==========================================================
+    // 屏幕切换
+    // ==========================================================
+    const menuScreen = document.getElementById('menu-screen');
+    const selectScreen = document.getElementById('select-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const raceScreen = document.getElementById('race-screen');
+    const resultScreen = document.getElementById('result-screen');
+
+    function switchScreen(target) {
+        [menuScreen, selectScreen, gameScreen, raceScreen, resultScreen].forEach(s => s.classList.remove('active'));
+        if (target) target.classList.add('active');
+
+        const showAlien = (target === menuScreen || target === selectScreen);
+        document.body.classList.toggle('in-game', !showAlien);
+    }
+
+    function showMenu() {
+        document.body.classList.remove('racing', 'racing-active');
+        resultScreen.classList.remove('show');
+        raceScreen.classList.remove('active');
+        switchScreen(menuScreen);
+        hideBadge();
+        playMenuBgm();
+    }
+    function showSelect() {
+        document.body.classList.remove('racing', 'racing-active');
+        resultScreen.classList.remove('show');
+        switchScreen(selectScreen);
+        if (bgmCurrentMode !== 'menu') playMenuBgm();
+    }
+    function showGame() {
+        document.body.classList.remove('racing', 'racing-active');
+        resultScreen.classList.remove('show');
+        switchScreen(gameScreen);
+        stopBgm();
+        restartGame();
+    }
+
+    // ==========================================================
+    // 用户选择的火箭
+    // ==========================================================
+    let selectedRocket = 'assets/rocket.png';
+
+    document.querySelectorAll('.rocket-option').forEach(option => {
+        option.addEventListener('click', () => {
+            document.querySelectorAll('.rocket-option').forEach(o => o.classList.remove('selected'));
+            option.classList.add('selected');
+            selectedRocket = option.dataset.rocket;
+            console.log('已选择火箭:', selectedRocket);
+            initAudio();
+            playMenuClick();
+            setTimeout(() => {
+                document.getElementById('rocket-img').src = selectedRocket;
+                showGame();
+            }, 400);
+        });
+    });
+
+    function playMenuClick() {
+        try {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(660, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1320, audioCtx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+        } catch (e) {}
+    }
+
+    document.getElementById('start-btn').addEventListener('click', () => {
+        initAudio(); playMenuClick();
+        setTimeout(showSelect, 200);
+    });
+
+    // ==========================================================
+    // 玩法说明 弹窗
+    // ==========================================================
+    document.getElementById('howto-btn').addEventListener('click', () => {
+        initAudio(); playMenuClick();
+        setTimeout(() => {
+            document.getElementById('howto-overlay').classList.add('show');
+        }, 150);
+    });
+
+    document.getElementById('howto-close').addEventListener('click', () => {
+        document.getElementById('howto-overlay').classList.remove('show');
+        initAudio(); playMenuClick();
+    });
+
+    document.getElementById('howto-overlay').addEventListener('click', (e) => {
+        if (e.target.id === 'howto-overlay') {
+            document.getElementById('howto-overlay').classList.remove('show');
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const overlay = document.getElementById('howto-overlay');
+            if (overlay && overlay.classList.contains('show')) {
+                overlay.classList.remove('show');
+            }
+        }
+    });
+
+    // ==========================================================
+    // 音频引擎
+    // ==========================================================
+    let audioCtx = null;
+    let noiseBuffer = null;
+
+    function initAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function getNoiseBuffer() {
+        if (noiseBuffer) return noiseBuffer;
+        const size = audioCtx.sampleRate * 0.1;
+        const buffer = audioCtx.createBuffer(1, size, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
+        noiseBuffer = buffer;
+        return buffer;
+    }
+
+    function playClick(time, isDownbeat = false, isRest = false) {
+        if (!audioCtx || isRest) return;
+        const masterGain = audioCtx.createGain();
+        masterGain.connect(audioCtx.destination);
+        const osc = audioCtx.createOscillator();
+        osc.type = 'triangle';
+        const baseFreq = isDownbeat ? 1100 : 850;
+        osc.frequency.setValueAtTime(baseFreq, time);
+        osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.5, time + 0.05);
+        const noiseSource = audioCtx.createBufferSource();
+        noiseSource.buffer = getNoiseBuffer();
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(isDownbeat ? 4500 : 2800, time);
+        filter.frequency.exponentialRampToValueAtTime(200, time + 0.05);
+        filter.Q.value = 1;
+        osc.connect(filter);
+        noiseSource.connect(filter);
+        filter.connect(masterGain);
+        const attack = 0.002, decay = 0.05;
+        masterGain.gain.setValueAtTime(0, time);
+        masterGain.gain.linearRampToValueAtTime(0.9, time + attack);
+        masterGain.gain.exponentialRampToValueAtTime(0.001, time + attack + decay);
+        osc.start(time); osc.stop(time + attack + decay + 0.02);
+        noiseSource.start(time); noiseSource.stop(time + attack + decay + 0.02);
+    }
+
+    function playErrorSound() {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(350, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.4);
+        gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+    }
+
+    function playRewardChime() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        [523.25, 659.25, 783.99].forEach((freq, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = 'triangle'; osc.frequency.value = freq;
+            const t = now + i * 0.08;
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.15, t + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+            osc.start(t); osc.stop(t + 0.3);
+        });
+    }
+
+    // ==========================================================
+    // BGM / 倒计时
+    // ==========================================================
+    const bgmAudio = document.getElementById('bgm-audio');
+    const countdownAudio = document.getElementById('countdown-audio');
+
+    bgmAudio.load();
+    countdownAudio.load();
+
+    let bgmCurrentMode = null;
+
+    function playMenuBgm() {
+        if (bgmCurrentMode === 'menu' && !bgmAudio.paused) return;
+        bgmCurrentMode = 'menu';
+        try {
+            bgmAudio.volume = 0.5;
+            const p = bgmAudio.play();
+            if (p && p.then) {
+                p.then(() => console.log('🎵 菜单/选择 BGM 播放中')).catch(err => {
+                    console.warn('⚠️ 菜单 BGM 被拦截:', err.name);
+                });
+            }
+        } catch (err) { console.warn('⚠️ 菜单 BGM 异常:', err); }
+    }
+
+    function playRaceBgm() {
+        bgmCurrentMode = 'race';
+        try {
+            bgmAudio.pause();
+            bgmAudio.currentTime = 0;
+            bgmAudio.volume = 0.55;
+            const p = bgmAudio.play();
+            if (p && p.then) {
+                p.then(() => console.log('🎵 竞赛 BGM 播放中')).catch(err => {
+                    console.warn('⚠️ 竞赛 BGM 被拦截:', err.name);
+                });
+            }
+        } catch (err) { console.warn('⚠️ 竞赛 BGM 异常:', err); }
+    }
+
+    function stopBgm() {
+        try {
+            bgmAudio.pause();
+            bgmAudio.currentTime = 0;
+            bgmCurrentMode = null;
+        } catch (e) {}
+    }
+
+    function playCountdownSound() {
+        try {
+            countdownAudio.pause();
+            countdownAudio.currentTime = 0;
+            countdownAudio.volume = 0.8;
+            const p = countdownAudio.play();
+            if (p && p.then) {
+                p.catch(err => console.warn('⚠️ 倒计时被拦截:', err.name));
+            }
+        } catch (err) { console.warn('⚠️ 倒计时异常:', err); }
+    }
+
+    // ==========================================================
+    // 用户手势解锁
+    // ==========================================================
+    let unlocked = false;
+
+    function tryUnlockAudio() {
+        if (unlocked) return;
+        if (bgmAudio.readyState < 2) {
+            bgmAudio.addEventListener('canplay', tryUnlockAudio, { once: true });
+            return;
+        }
+        unlocked = true;
+        console.log('🔓 开始解锁音频, readyState =', bgmAudio.readyState);
+
+        bgmAudio.volume = 0.5;
+        const p = bgmAudio.play();
+        if (p && p.then) {
+            p.then(() => {
+                console.log('✅ BGM 在用户手势内播放成功');
+                bgmCurrentMode = 'menu';
+            }).catch(err => {
+                console.warn('⚠️ BGM 解锁失败:', err.name);
+                unlocked = false;
+            });
+        }
+    }
+
+    document.addEventListener('click', tryUnlockAudio, { capture: true });
+    document.addEventListener('touchstart', tryUnlockAudio, { capture: true });
+    document.addEventListener('keydown', tryUnlockAudio, { capture: true });
+
+    setInterval(() => {
+        if (!unlocked) return;
+        const inMenuOrSelect = menuScreen.classList.contains('active') ||
+                               selectScreen.classList.contains('active');
+        if (inMenuOrSelect && bgmAudio.paused && bgmCurrentMode !== 'race') {
+            console.log('🔄 检测到 BGM 暂停，自动恢复');
+            playMenuBgm();
+        }
+    }, 800);
+
+    // ==========================================================
+    // 答题时的 rocket-sound 音效
+    // ==========================================================
+    let rocketSound = null;
+    let rocketSoundTimer = null;
+
+    function playRocketSound() {
+        try {
+            if (!rocketSound) {
+                rocketSound = new Audio('audios/rocket-sound.mp3');
+                rocketSound.volume = 0.6;
+                rocketSound.preload = 'auto';
+            }
+            rocketSound.currentTime = 0;
+            rocketSound.play().catch(() => {});
+            if (rocketSoundTimer) clearTimeout(rocketSoundTimer);
+            rocketSoundTimer = setTimeout(() => {
+                try { rocketSound.pause(); rocketSound.currentTime = 0; } catch (e) {}
+            }, 2000);
+        } catch (err) {}
+    }
+
+    // ==========================================================
+    // 音符图片
+    // ==========================================================
+    const IMAGE_MAP = {
+        'quarter': 'assets/quarter.png',
+        'eighth':  'assets/eighth.png',
+        'half':    'assets/half.png',
+        'rest':    'assets/rest.png'
+    };
+
+    function getNoteImage(type) {
+        const src = IMAGE_MAP[type];
+        if (!src) return '';
+        return `<img class="note-img" src="${src}" alt="${type}" draggable="false">`;
+    }
+
+    function renderRhythmToButton(btn, pattern) {
+        const keyBadge = btn.querySelector('.key-badge');
+        const keyHtml = keyBadge ? keyBadge.outerHTML : '';
+        let notesHtml = '<div class="notes-display">';
+        pattern.forEach(note => { notesHtml += getNoteImage(note); });
+        notesHtml += '</div>';
+        btn.innerHTML = keyHtml + notesHtml;
+    }
+
+    // ==========================================================
+    // 题库
+    // ==========================================================
+    const QUESTIONS = [
+        { correct: ['half', 'quarter', 'quarter'],
+          wrong1:  ['quarter', 'half', 'quarter'],
+          wrong2:  ['quarter', 'quarter', 'half'] },
+
+        { correct: ['half', 'eighth', 'eighth'],
+          wrong1:  ['eighth', 'half', 'eighth'],
+          wrong2:  ['eighth', 'eighth', 'half'] },
+
+        { correct: ['half', 'rest', 'quarter'],
+          wrong1:  ['quarter', 'half', 'rest'],
+          wrong2:  ['half', 'quarter', 'eighth'] },
+
+        { correct: ['half', 'rest', 'eighth'],
+          wrong1:  ['eighth', 'rest', 'half'],
+          wrong2:  ['half', 'eighth', 'quarter'] },
+
+        { correct: ['quarter', 'quarter', 'quarter', 'eighth'],
+          wrong1:  ['quarter', 'quarter', 'eighth', 'quarter'],
+          wrong2:  ['quarter', 'eighth', 'quarter', 'quarter'] },
+
+        { correct: ['quarter', 'quarter', 'eighth', 'eighth'],
+          wrong1:  ['quarter', 'eighth', 'quarter', 'eighth'],
+          wrong2:  ['eighth', 'quarter', 'quarter', 'eighth'] },
+
+        { correct: ['quarter', 'rest', 'quarter', 'quarter'],
+          wrong1:  ['quarter', 'quarter', 'rest', 'quarter'],
+          wrong2:  ['quarter', 'quarter', 'eighth', 'quarter'] },
+
+        { correct: ['quarter', 'quarter', 'rest', 'eighth'],
+          wrong1:  ['quarter', 'rest', 'quarter', 'eighth'],
+          wrong2:  ['eighth', 'quarter', 'quarter', 'quarter'] },
+
+        { correct: ['eighth', 'eighth', 'quarter', 'quarter'],
+          wrong1:  ['eighth', 'quarter', 'eighth', 'quarter'],
+          wrong2:  ['quarter', 'eighth', 'eighth', 'quarter'] },
+
+        { correct: ['quarter', 'rest', 'quarter', 'eighth'],
+          wrong1:  ['half', 'rest', 'quarter'],
+          wrong2:  ['eighth', 'rest', 'half'] }
+    ];
+
+    // ==========================================================
+    // 题库校验
+    // ==========================================================
+    const BEAT_VALUES = {
+        'quarter': 1,
+        'eighth': 1,
+        'half': 2,
+        'rest': 1
+    };
+
+    function patternTotalBeats(pattern) {
+        let total = 0;
+        for (const note of pattern) total += BEAT_VALUES[note] || 0;
+        return total;
+    }
+
+    function validatePattern(pattern) {
+        if (Math.abs(patternTotalBeats(pattern) - 4) > 0.001) return false;
+        if (new Set(pattern).size < 2) return false;
+        if (pattern[0] === 'rest') return false;
+        if (pattern[pattern.length - 1] === 'rest') return false;
+        return true;
+    }
+
+    function validateQuestion(q) {
+        return validatePattern(q.correct) &&
+               validatePattern(q.wrong1) &&
+               validatePattern(q.wrong2);
+    }
+
+    function getValidQuestionIndices() {
+        const valid = [];
+        QUESTIONS.forEach((q, i) => {
+            if (validateQuestion(q)) {
+                valid.push(i);
+            } else {
+                console.warn(`⚠️ 题目 ${i + 1} 未通过校验，已跳过`);
+            }
+        });
+        return valid;
+    }
+
+    console.log('📋 题库校验结果：');
+    console.log(`   总题目数：${QUESTIONS.length}`);
+    const VALID_INDICES = getValidQuestionIndices();
+    console.log(`   合规题目数：${VALID_INDICES.length}`);
+
+    // ==========================================================
+    // 游戏状态
+    // ==========================================================
+    let currentQuestionIdx = 0;
+    let correctCount = 0;
+    let wrongCount = 0;
+    let combo = 0;
+    let energy = 0;
+    let isPlaying = false;
+    let canAnswer = false;
+    let answeredThisQuestion = false;
+    let currentCorrectPattern = [];
+    let currentOptions = [];
+    let questionOrder = [];
+
+    const TOTAL_QUESTIONS = VALID_INDICES.length;
+    const MAX_ENERGY = 10;
+
+    const scoreCorrectEl = document.getElementById('score-correct');
+    const scoreWrongEl = document.getElementById('score-wrong');
+    const energyBars = document.getElementById('energy-bars');
+    const energyPanel = document.getElementById('energy-panel');
+    const playBtn = document.getElementById('play-btn');
+    const optionBtns = document.querySelectorAll('.option-btn');
+    const feedbackText = document.getElementById('feedback-text');
+    const comboDisplay = document.getElementById('combo-display');
+    const rocketWrapper = document.getElementById('rocket-wrapper');
+
+    function createEnergyBars() {
+        energyBars.innerHTML = '';
+        for (let i = 0; i < MAX_ENERGY; i++) {
+            const seg = document.createElement('div');
+            seg.className = 'energy-seg';
+            energyBars.appendChild(seg);
+        }
+    }
+
+    function updateEnergyBar() {
+        const segs = energyBars.querySelectorAll('.energy-seg');
+        segs.forEach((seg, idx) => seg.classList.toggle('filled', idx < energy));
+    }
+
+    function updateScore() {
+        scoreCorrectEl.textContent = correctCount;
+        scoreWrongEl.textContent = wrongCount;
+    }
+
+    function generateQuestionOrder() {
+        const order = [...VALID_INDICES];
+        for (let i = order.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [order[i], order[j]] = [order[j], order[i]];
+        }
+        return order;
+    }
+
+    function loadQuestion() {
+        if (currentQuestionIdx >= questionOrder.length) { endGame(); return; }
+        const q = QUESTIONS[questionOrder[currentQuestionIdx]];
+
+        if (!validateQuestion(q)) {
+            currentQuestionIdx++;
+            loadQuestion();
+            return;
+        }
+
+        currentCorrectPattern = [...q.correct];
+        const allOptions = [[...q.correct], [...q.wrong1], [...q.wrong2]];
+        shuffleArray(allOptions);
+        currentOptions = allOptions;
+        optionBtns.forEach((btn, idx) => {
+            renderRhythmToButton(btn, allOptions[idx]);
+            btn.classList.remove('correct', 'wrong');
+            btn.disabled = false;
+        });
+        canAnswer = false;
+        answeredThisQuestion = false;
+        playBtn.disabled = false;
+        playBtn.style.opacity = '1';
+        playBtn.style.cursor = 'pointer';
+    }
+
+    function patternsEqual(a, b) {
+        return a.length === b.length && a.every((v, i) => v === b[i]);
+    }
+
+    function shuffleArray(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+    }
+
+    function isCurrentCorrectOption(selectedPattern) {
+        return patternsEqual(selectedPattern, currentCorrectPattern);
+    }
+
+    // ==========================================================
+    // 播放节奏
+    // ==========================================================
+    function playRhythm() {
+        if (isPlaying || !audioCtx) return;
+        const validNotes = ['quarter', 'eighth', 'half', 'rest'];
+        const isValid = currentCorrectPattern.every(n => validNotes.includes(n));
+        if (!isValid || currentCorrectPattern[0] === 'rest') return;
+
+        isPlaying = true;
+        canAnswer = false;
+        playBtn.disabled = true;
+        playBtn.style.opacity = '0.4';
+        playBtn.style.cursor = 'not-allowed';
+        optionBtns.forEach(btn => btn.disabled = true);
+
+        const pattern = currentCorrectPattern;
+        const bpm = 90;
+        const beatDuration = 60 / bpm;
+        let time = audioCtx.currentTime + 0.15;
+
+        for (let i = 0; i < pattern.length; i++) {
+            const note = pattern[i];
+            const isDownbeat = i === 0;
+            if (note === 'quarter') {
+                playClick(time, isDownbeat, false);
+                time += beatDuration;
+            }
+            else if (note === 'eighth') {
+                playClick(time, isDownbeat, false);
+                time += beatDuration / 2;
+                playClick(time, false, false);
+                time += beatDuration / 2;
+            }
+            else if (note === 'half') {
+                playClick(time, isDownbeat, false);
+                time += beatDuration * 2;
+            }
+            else if (note === 'rest') {
+                time += beatDuration;
+            }
+        }
+
+        const totalDuration = (time - audioCtx.currentTime) * 1000;
+        setTimeout(() => {
+            isPlaying = false;
+            canAnswer = true;
+            playBtn.disabled = false;
+            playBtn.style.opacity = '1';
+            playBtn.style.cursor = 'pointer';
+            optionBtns.forEach(btn => btn.disabled = false);
+        }, totalDuration + 200);
+    }
+
+    function showFeedback(text, type) {
+        feedbackText.textContent = text;
+        feedbackText.className = 'show ' + type;
+        setTimeout(() => feedbackText.classList.remove('show'), 1400);
+    }
+
+    function spawnRewardStars(count) {
+        for (let i = 0; i < count; i++) {
+            const star = document.createElement('div');
+            star.className = 'reward-star';
+            star.textContent = '★';
+            star.style.left = (50 + (Math.random() - 0.5) * 30) + '%';
+            star.style.top = '50%';
+            document.getElementById('space-scene').appendChild(star);
+            const angle = (Math.random() * 60 + 60) * Math.PI / 180;
+            const distance = 200 + Math.random() * 150;
+            const dx = Math.cos(angle) * distance;
+            const dy = -Math.sin(angle) * distance;
+            star.animate([
+                { transform: 'translate(-50%, -50%) scale(0.3)', opacity: 0 },
+                { transform: `translate(calc(-50% + ${dx * 0.5}px), calc(-50% + ${dy * 0.5}px)) scale(1.4)`, opacity: 1, offset: 0.4 },
+                { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.8)`, opacity: 0 }
+            ], { duration: 1200, delay: i * 60, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'forwards' }).onfinish = () => star.remove();
+        }
+    }
+
+    function advanceRocket() {
+        rocketWrapper.classList.add('rocket-listening');
+        rocketWrapper.style.transform = 'translate(-50%, -56%) scale(1.03)';
+        playRocketSound();
+        setTimeout(() => { rocketWrapper.style.transform = 'translate(-50%, -50%) scale(1)'; }, 800);
+        setTimeout(() => { rocketWrapper.classList.remove('rocket-listening'); }, 2000);
+    }
+
+    function flyBatteryToEnergy() {
+        const rocketRect = rocketWrapper.getBoundingClientRect();
+        const stageRect = document.getElementById('stage').getBoundingClientRect();
+        const scale = stageRect.width / 1920;
+        const rocketX = (rocketRect.left + rocketRect.width / 2 - stageRect.left) / scale;
+        const rocketY = (rocketRect.top + rocketRect.height / 2 - stageRect.top) / scale;
+        const energyRect = energyPanel.getBoundingClientRect();
+        const energyX = (energyRect.left + energyRect.width / 2 - stageRect.left) / scale;
+        const energyY = (energyRect.top + energyRect.height / 2 - stageRect.top) / scale;
+
+        const battery = document.createElement('img');
+        battery.src = 'assets/battery.png';
+        battery.className = 'flying-battery';
+        battery.style.left = (rocketX - 120) + 'px';
+        battery.style.top = (rocketY - 120) + 'px';
+        battery.alt = '';
+        battery.onerror = function() { this.remove(); };
+        document.getElementById('stage').appendChild(battery);
+
+        const dx = energyX - rocketX;
+        const dy = energyY - rocketY;
+
+        battery.animate([
+            { transform: 'translate(0, 0) rotate(0deg) scale(0.5)', opacity: 0 },
+            { transform: `translate(${dx * 0.15}px, ${dy * 0.15 - 80}px) rotate(180deg) scale(1.2)`, opacity: 1, offset: 0.25 },
+            { transform: `translate(${dx * 0.9}px, ${dy * 0.9}px) rotate(700deg) scale(0.9)`, opacity: 1, offset: 0.9 },
+            { transform: `translate(${dx}px, ${dy}px) rotate(720deg) scale(0.6)`, opacity: 0 }
+        ], { duration: 1300, easing: 'cubic-bezier(0.5, 0, 0.7, 1)', fill: 'forwards' }).onfinish = () => {
+            battery.remove();
+            energyPanel.classList.add('hit');
+            setTimeout(() => energyPanel.classList.remove('hit'), 600);
+        };
+    }
+
+    function handleAnswer(selectedIdx) {
+        if (!canAnswer || answeredThisQuestion) return;
+        const selectedPattern = currentOptions[selectedIdx];
+        const isCorrect = isCurrentCorrectOption(selectedPattern);
+
+        if (isCorrect) {
+            answeredThisQuestion = true;
+            canAnswer = false;
+            optionBtns.forEach(btn => btn.disabled = true);
+            correctCount++;
+            combo++;
+            energy = Math.min(MAX_ENERGY, energy + 1);
+            updateEnergyBar();
+            updateScore();
+            showFeedback('完美！', 'perfect');
+            playRewardChime();
+            spawnRewardStars(6);
+            advanceRocket();
+            setTimeout(flyBatteryToEnergy, 300);
+            if (combo >= 2) {
+                comboDisplay.textContent = `连击 ×${combo}！`;
+                comboDisplay.classList.add('show');
+                setTimeout(() => comboDisplay.classList.remove('show'), 1500);
+            }
+            optionBtns[selectedIdx].classList.add('correct');
+            setTimeout(() => { currentQuestionIdx++; loadQuestion(); }, 2200);
+        } else {
+            answeredThisQuestion = true;
+            canAnswer = false;
+            wrongCount++;
+            combo = 0;
+            updateScore();
+            playErrorSound();
+            optionBtns[selectedIdx].classList.add('wrong');
+            optionBtns.forEach(btn => btn.disabled = true);
+            setTimeout(() => {
+                currentQuestionIdx++;
+                loadQuestion();
+            }, 1500);
+        }
+    }
+
+    function endGame() {
+        showBadge();
+        setTimeout(() => {
+            hideBadge();
+            setTimeout(() => {
+                gameScreen.classList.remove('active');
+                showRaceScreen();
+            }, 500);
+        }, 5000);
+    }
+
+    function showBadge() { document.getElementById('badge-overlay').classList.add('show'); }
+    function hideBadge() { document.getElementById('badge-overlay').classList.remove('show'); }
+
+    function restartGame() {
+        questionOrder = generateQuestionOrder();
+        currentQuestionIdx = 0;
+        correctCount = 0;
+        wrongCount = 0;
+        combo = 0;
+        energy = 0;
+        isPlaying = false;
+        canAnswer = false;
+        answeredThisQuestion = false;
+        updateEnergyBar();
+        updateScore();
+        hideBadge();
+        resultScreen.classList.remove('show');
+        loadQuestion();
+    }
+
+    // ==========================================================
+    // 太空竞速
+    // ==========================================================
+    let raceAnimFrame = null;
+    let raceTimeout = null;
+
+    function showRaceScreen() {
+        switchScreen(raceScreen);
+
+        document.getElementById('racer-rocket-img').src = selectedRocket;
+
+        document.getElementById('countdown').classList.remove('pop');
+        document.getElementById('race-result').classList.remove('show');
+        document.getElementById('race-result').textContent = '';
+        document.getElementById('racer-rocket-flame').classList.remove('active');
+        document.getElementById('alien-beam').classList.remove('active');
+
+        const rocket = document.getElementById('racer-rocket');
+        const alien = document.getElementById('racer-alien');
+        rocket.style.transition = 'none';
+        alien.style.transition = 'none';
+        rocket.style.bottom = '-20%';
+        alien.style.bottom = '-20%';
+
+        if (raceAnimFrame) cancelAnimationFrame(raceAnimFrame);
+        if (raceTimeout) clearTimeout(raceTimeout);
+
+        document.body.classList.add('racing');
+        document.body.classList.remove('racing-active');
+
+        stopBgm();
+
+        const cd = document.getElementById('countdown');
+        cd.classList.remove('pop');
+        cd.textContent = '';
+
+        playCountdownSound();
+
+        cd.textContent = '3';
+        cd.classList.add('pop');
+
+        setTimeout(() => {
+            cd.textContent = '2';
+            cd.classList.remove('pop'); void cd.offsetWidth; cd.classList.add('pop');
+        }, 1000);
+
+        setTimeout(() => {
+            cd.textContent = '1';
+            cd.classList.remove('pop'); void cd.offsetWidth; cd.classList.add('pop');
+        }, 2000);
+
+        setTimeout(() => {
+            cd.textContent = 'GO!';
+            cd.classList.remove('pop'); void cd.offsetWidth; cd.classList.add('pop');
+        }, 3000);
+
+        setTimeout(() => {
+            startRace();
+        }, 3500);
+    }
+
+    function startRace() {
+        document.body.classList.add('racing-active');
+
+        const rocketFlame = document.getElementById('racer-rocket-flame');
+        const alienBeam = document.getElementById('alien-beam');
+        const rocket = document.getElementById('racer-rocket');
+        const alien = document.getElementById('racer-alien');
+
+        rocketFlame.classList.add('active');
+        alienBeam.classList.add('active');
+
+        playRaceBgm();
+
+        rocket.style.transition = 'bottom 0.05s linear';
+        alien.style.transition = 'bottom 0.05s linear';
+
+        const duration = 10000;
+        const startTime = performance.now();
+
+        function getRocketProgress(t) {
+            if (wrongCount === 0) return Math.min(1, t * 1.05);
+            if (t < 0.25) return t * 1.2;
+            if (t < 0.45) return 0.30 + (t - 0.25) * 0.5;
+            if (t < 0.70) return 0.40 + (t - 0.45) * 1.6;
+            return 0.80 + (t - 0.70) * 0.667;
+        }
+
+        function getAlienProgress(t) {
+            if (wrongCount === 0) return Math.min(0.92, t * 0.95);
+            if (t < 0.25) return t * 0.9;
+            if (t < 0.45) return 0.225 + (t - 0.25) * 2.0;
+            if (t < 0.70) return 0.625 + (t - 0.45) * 0.5;
+            return 0.750 + (t - 0.70) * 0.5;
+        }
+
+        function animate(now) {
+            const elapsed = now - startTime;
+            const t = Math.min(1, elapsed / duration);
+            const rocketP = getRocketProgress(t);
+            const alienP = getAlienProgress(t);
+
+            rocket.style.bottom = (-20 + rocketP * 150) + '%';
+            alien.style.bottom = (-20 + alienP * 150) + '%';
+
+            if (t < 1) {
+                raceAnimFrame = requestAnimationFrame(animate);
+            } else {
+                stopBgm();
+
+                rocketFlame.classList.remove('active');
+                alienBeam.classList.remove('active');
+                rocket.style.transition = '';
+                alien.style.transition = '';
+                rocket.style.bottom = '130%';
+                alien.style.bottom = '130%';
+
+                const raceResultEl = document.getElementById('race-result');
+                raceResultEl.textContent = '🚀 胜利！';
+                raceResultEl.classList.add('show');
+
+                raceTimeout = setTimeout(() => {
+                    showResultScreen();
+                }, 1500);
+            }
+        }
+
+        raceAnimFrame = requestAnimationFrame(animate);
+    }
+
+    // ==========================================================
+    // 结算页
+    // ==========================================================
+    function showResultScreen() {
+        const total = TOTAL_QUESTIONS;
+        const ratio = correctCount / total;
+        let starCount = 0;
+        if (ratio >= 1) starCount = 5;
+        else if (ratio >= 0.9) starCount = 4;
+        else if (ratio >= 0.7) starCount = 3;
+        else if (ratio >= 0.5) starCount = 2;
+        else if (ratio > 0) starCount = 1;
+
+        let headline = '继续加油！';
+        if (starCount === 5) headline = '超级飞人！';
+        else if (starCount === 4) headline = '太棒了！';
+        else if (starCount === 3) headline = '干得漂亮！';
+        else if (starCount === 2) headline = '继续努力！';
+        else if (starCount === 1) headline = '再试一次！';
+        document.getElementById('result-headline').textContent = headline;
+
+        const starsEl = document.getElementById('result-stars');
+        starsEl.innerHTML = '';
+        for (let i = 0; i < 5; i++) {
+            const star = document.createElement('span');
+            star.className = 'result-star' + (i < starCount ? '' : ' empty');
+            star.textContent = '★';
+            star.style.animationDelay = (i * 0.1) + 's';
+            starsEl.appendChild(star);
+        }
+
+        document.getElementById('result-correct-num').textContent = correctCount;
+        document.getElementById('result-wrong-num').textContent = wrongCount;
+
+        resultScreen.classList.add('show');
+    }
+
+    // ==========================================================
+    // 【调试】按 R / T 键
+    // ==========================================================
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'r' || e.key === 'R' || e.key === 't' || e.key === 'T') {
+            if (e.key === 'r' || e.key === 'R') {
+                wrongCount = 2; correctCount = 8;
+            } else {
+                wrongCount = 0; correctCount = 10;
+            }
+            energy = 8;
+            updateEnergyBar();
+            updateScore();
+
+            [menuScreen, selectScreen, gameScreen].forEach(s => s.classList.remove('active'));
+            resultScreen.classList.remove('show');
+            hideBadge();
+
+            raceScreen.classList.remove('active');
+            void raceScreen.offsetWidth;
+            setTimeout(() => { showRaceScreen(); }, 100);
+            return;
+        }
+
+        if (!gameScreen.classList.contains('active')) return;
+        if (e.key === '1') handleAnswer(0);
+        else if (e.key === '2') handleAnswer(1);
+        else if (e.key === '3') handleAnswer(2);
+        else if (e.key === ' ' || e.key === 'Enter') {
+            e.preventDefault();
+            if (!playBtn.disabled) { initAudio(); playRhythm(); }
+        }
+    });
+
+    // ==========================================================
+    // 其他按钮
+    // ==========================================================
+    playBtn.addEventListener('click', () => { initAudio(); playRhythm(); });
+    optionBtns.forEach((btn, idx) => btn.addEventListener('click', () => handleAnswer(idx)));
+
+    document.getElementById('help-btn').addEventListener('click', () => {
+        initAudio();
+        playMenuClick();
+        document.getElementById('howto-overlay').classList.add('show');
+    });
+
+    document.getElementById('home-btn').addEventListener('click', () => { showMenu(); });
+
+    document.getElementById('result-play-again').addEventListener('click', () => {
+        if (raceAnimFrame) cancelAnimationFrame(raceAnimFrame);
+        if (raceTimeout) clearTimeout(raceTimeout);
+        stopBgm();
+        document.body.classList.remove('racing', 'racing-active');
+        resultScreen.classList.remove('show');
+        raceScreen.classList.remove('active');
+        showGame();
+    });
+
+    document.getElementById('result-back-menu').addEventListener('click', () => {
+        if (raceAnimFrame) cancelAnimationFrame(raceAnimFrame);
+        if (raceTimeout) clearTimeout(raceTimeout);
+        stopBgm();
+        document.body.classList.remove('racing', 'racing-active');
+        resultScreen.classList.remove('show');
+        raceScreen.classList.remove('active');
+        showMenu();
+    });
+
+    // ==========================================================
+    // 启动
+    // ==========================================================
+    createStars();
+    createEnergyBars();
+    questionOrder = generateQuestionOrder();
+    loadQuestion();
+    currentQuestionIdx = 0;
+    correctCount = 0;
+    wrongCount = 0;
+    combo = 0;
+    energy = 0;
+    updateEnergyBar();
+    updateScore();
+</script>
+</body>
+</html>
